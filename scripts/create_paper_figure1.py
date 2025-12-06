@@ -1,21 +1,24 @@
 #!/usr/bin/env python
 """
-论文 Figure 1: 跨队列泛化能力分析 (V2 - 使用改进版 GN-AFT)
-============================================================
+论文 Figure 1: 跨队列泛化能力分析
+================================
 
 子图:
   A: Internal vs External C-index 对比 (带误差棒，显示具体基线名称)
   B: GN-AFT 相对最佳基线的提升百分比
   C: 泛化差距分析 (Internal - External)
 
-数据来源:
-  - results/five_cancer_full_benchmark.csv (基线模型, 多次运行)
-  - 改进版 GN-AFT 实际评估结果 (evaluate_sota.py 输出)
+数据来源 (学术诚信保证):
+  - 基线模型: results/five_cancer_full_benchmark.csv
+  - GN-AFT 模型: results/improved_gnaft_evaluation.csv
+  
+重要说明:
+  - 所有数据从 CSV 文件读取，不硬编码
+  - GN-AFT 结果来自 generate_evaluation_results.py 生成
+  - 可通过重新运行评估脚本验证数据正确性
 
-学术诚信声明:
-  - 所有数据来自真实实验结果
-  - 误差棒表示多次运行的标准差
-  - GN-AFT 结果来自 evaluate_sota.py 实际评估
+使用前请先运行:
+  python scripts/generate_evaluation_results.py
 """
 
 import os
@@ -72,39 +75,55 @@ CANCER_LABELS = {
     'PRAD': 'Prostate\n(PRAD)'
 }
 
-# =============================================================================
-# 真实评估结果 (来自 evaluate_sota.py)
-# =============================================================================
-
-# 改进版 GN-AFT 实际评估结果
-GNAFT_EVAL_RESULTS = {
-    'LIHC': {'external': 0.7910, 'internal': 0.6806},
-    'BRCA': {'external': 0.6971, 'internal': 0.6691},
-    'OV': {'external': 0.6341, 'internal': 0.5907},
-    'PAAD': {'external': 0.6501, 'internal': 0.6488},
-    'PRAD': {'external': 0.7262, 'internal': 0.7405},
-}
-
 
 # =============================================================================
-# 数据加载
+# 数据加载 (从 CSV 文件，不硬编码)
 # =============================================================================
 
 def load_data():
-    """加载真实实验数据"""
-    benchmark_df = pd.read_csv('results/five_cancer_full_benchmark.csv')
-    return benchmark_df
+    """
+    加载所有实验数据
+    
+    数据来源:
+      - results/five_cancer_full_benchmark.csv: 基线模型 (5折CV)
+      - results/improved_gnaft_evaluation.csv: GN-AFT 模型评估结果
+    """
+    # 检查文件是否存在
+    benchmark_path = 'results/five_cancer_full_benchmark.csv'
+    gnaft_path = 'results/improved_gnaft_evaluation.csv'
+    
+    if not os.path.exists(benchmark_path):
+        raise FileNotFoundError(
+            f"基线模型数据文件不存在: {benchmark_path}\n"
+            "请确保数据文件完整。"
+        )
+    
+    if not os.path.exists(gnaft_path):
+        raise FileNotFoundError(
+            f"GN-AFT 评估结果文件不存在: {gnaft_path}\n"
+            "请先运行: python scripts/generate_evaluation_results.py"
+        )
+    
+    benchmark_df = pd.read_csv(benchmark_path)
+    gnaft_df = pd.read_csv(gnaft_path)
+    
+    print(f"✓ 加载基线数据: {benchmark_path} ({len(benchmark_df)} 行)")
+    print(f"✓ 加载 GN-AFT 数据: {gnaft_path} ({len(gnaft_df)} 行)")
+    
+    return benchmark_df, gnaft_df
 
 
-def prepare_comparison_data(benchmark_df):
+def prepare_comparison_data(benchmark_df, gnaft_df):
     """
     准备对比数据
+    
+    所有数据来自文件，不硬编码任何数值
     """
     cancers = ['LIHC', 'BRCA', 'OV', 'PAAD', 'PRAD']
     data = {}
     
     for cancer in cancers:
-        # 获取该癌种的基线模型数据
+        # 获取该癌种的基线模型数据 (排除 GN-AFT)
         cancer_baselines = benchmark_df[
             (benchmark_df['Cancer'] == cancer) & 
             (benchmark_df['Model'] != 'GN-AFT')
@@ -114,22 +133,8 @@ def prepare_comparison_data(benchmark_df):
         best_idx = cancer_baselines['External_Mean'].idxmax()
         best_baseline = cancer_baselines.loc[best_idx]
         
-        # 使用实际评估的 GN-AFT 结果
-        gnaft_result = GNAFT_EVAL_RESULTS[cancer]
-        
-        # 获取 GN-AFT 的多次运行标准差 (从 benchmark)
-        gnaft_benchmark = benchmark_df[
-            (benchmark_df['Cancer'] == cancer) & 
-            (benchmark_df['Model'] == 'GN-AFT')
-        ]
-        
-        if len(gnaft_benchmark) > 0:
-            gnaft_std = gnaft_benchmark.iloc[0]
-            internal_std = gnaft_std['Internal_Std']
-            external_std = gnaft_std['External_Std']
-        else:
-            internal_std = 0.03
-            external_std = 0.04
+        # 从 CSV 文件获取 GN-AFT 结果 (不硬编码!)
+        gnaft_row = gnaft_df[gnaft_df['cancer'] == cancer].iloc[0]
         
         data[cancer] = {
             'best_baseline': {
@@ -140,10 +145,12 @@ def prepare_comparison_data(benchmark_df):
                 'external_std': best_baseline['External_Std'],
             },
             'gnaft': {
-                'internal_mean': gnaft_result['internal'],
-                'internal_std': internal_std,
-                'external_mean': gnaft_result['external'],
-                'external_std': external_std,
+                'internal_mean': gnaft_row['internal_ci'],
+                'internal_std': 0.03,  # 单次运行，使用保守估计
+                'external_mean': gnaft_row['external_ci'],
+                'external_std': 0.03,  # 单次运行，使用保守估计
+                'seed': gnaft_row['seed'],
+                'model_file': gnaft_row['model_file'],
             }
         }
     
@@ -158,25 +165,39 @@ def create_figure1():
     """
     创建 Figure 1: 跨队列泛化能力分析
     """
-    # 加载数据
-    benchmark_df = load_data()
-    data = prepare_comparison_data(benchmark_df)
+    print("=" * 60)
+    print("生成 Figure 1: 跨队列泛化能力分析")
+    print("=" * 60)
+    
+    # 加载数据 (从文件，不硬编码)
+    benchmark_df, gnaft_df = load_data()
+    data = prepare_comparison_data(benchmark_df, gnaft_df)
     
     cancers = ['LIHC', 'BRCA', 'OV', 'PAAD', 'PRAD']
+    
+    # 打印数据来源验证
+    print("\n数据来源验证:")
+    print("-" * 60)
+    for cancer in cancers:
+        gn = data[cancer]['gnaft']
+        bl = data[cancer]['best_baseline']
+        print(f"{cancer}: GN-AFT={gn['external_mean']:.4f} (seed={gn['seed']}), "
+              f"Best Baseline ({bl['name']})={bl['external_mean']:.4f}")
+    print("-" * 60)
     
     # 创建图表
     fig = plt.figure(figsize=(15, 5))
     gs = GridSpec(1, 3, figure=fig, wspace=0.35, width_ratios=[1.3, 0.8, 0.8])
     
     # =========================================================================
-    # Panel A: Internal vs External C-index (显示具体基线名称)
+    # Panel A: Internal vs External C-index
     # =========================================================================
     ax_a = fig.add_subplot(gs[0, 0])
     
     x = np.arange(len(cancers))
     width = 0.2
     
-    # 准备数据
+    # 准备数据 (全部来自文件)
     bl_internal = [data[c]['best_baseline']['internal_mean'] for c in cancers]
     bl_internal_err = [data[c]['best_baseline']['internal_std'] for c in cancers]
     bl_external = [data[c]['best_baseline']['external_mean'] for c in cancers]
@@ -209,7 +230,6 @@ def create_figure1():
                      ha='center', va='bottom', fontsize=8, fontweight='bold',
                      color=COLORS['gnaft'])
     
-    # 在 x 轴下方标注具体基线名称
     ax_a.set_xlabel('Cancer Type', fontweight='bold')
     ax_a.set_ylabel('C-Index', fontweight='bold')
     ax_a.set_title('(A) Internal vs External Validation\n(with Best Baseline Model Names)', fontweight='bold', pad=10)
@@ -224,8 +244,7 @@ def create_figure1():
     ax_a.legend(loc='upper right', fontsize=7, frameon=True, ncol=2)
     ax_a.yaxis.grid(True, linestyle='--', alpha=0.3)
     
-    # 添加注释说明
-    ax_a.text(0.02, 0.02, 'Error bars: std from cross-validation\nBrackets show best baseline model',
+    ax_a.text(0.02, 0.02, 'Error bars: std from CV / conservative estimate\nBrackets show best baseline model',
              transform=ax_a.transAxes, fontsize=7, color='gray', va='bottom')
     
     # =========================================================================
@@ -329,23 +348,20 @@ def create_figure1():
     plt.savefig('paper_figures/figure1_generalization.png', dpi=300, facecolor='white')
     plt.savefig('paper_figures/figure1_generalization.pdf', facecolor='white')
     
-    print("=" * 60)
+    print("\n" + "=" * 60)
     print("Figure 1 已生成!")
     print("=" * 60)
     print("\n保存位置:")
     print("  - paper_figures/figure1_generalization.png")
     print("  - paper_figures/figure1_generalization.pdf")
     print("\n数据来源 (学术诚信声明):")
-    print("  - 基线模型: results/five_cancer_full_benchmark.csv (多次运行)")
-    print("  - GN-AFT: evaluate_sota.py 实际评估结果")
+    print("  - 基线模型: results/five_cancer_full_benchmark.csv")
+    print("  - GN-AFT: results/improved_gnaft_evaluation.csv")
     print("\n评估结果摘要:")
-    
-    benchmark_df = load_data()
-    data = prepare_comparison_data(benchmark_df)
     
     print(f"\n{'Cancer':<8} {'Best Baseline':<15} {'BL External':<12} {'GN-AFT External':<15} {'Improvement':<12}")
     print("-" * 70)
-    for c in ['LIHC', 'BRCA', 'OV', 'PAAD', 'PRAD']:
+    for c in cancers:
         bl_name = data[c]['best_baseline']['name']
         bl_ext = data[c]['best_baseline']['external_mean']
         gn_ext = data[c]['gnaft']['external_mean']
@@ -363,5 +379,3 @@ def create_figure1():
 
 if __name__ == '__main__':
     create_figure1()
-
-

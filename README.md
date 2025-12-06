@@ -80,10 +80,25 @@ pip install -r requirements.txt
 - lifelines (survival analysis)
 - matplotlib
 
-### Step 2: Verify Model Results
+### Step 2: Generate Evaluation Results (Required!)
+
+**重要：** 在生成图表前，必须先运行评估脚本生成可追溯的结果文件：
 
 ```bash
-# Evaluate all 5 cancer types with saved models
+# 生成 results/improved_gnaft_evaluation.csv
+python scripts/generate_evaluation_results.py
+```
+
+这个脚本会：
+1. 加载 5 个保存的模型
+2. 在各自的测试集上评估
+3. 将结果保存到 CSV 文件
+4. 验证结果与期望值匹配
+
+### Step 3: Verify Model Results
+
+```bash
+# 或者使用简化的验证脚本
 python scripts/load_improved_models.py
 ```
 
@@ -98,10 +113,21 @@ PAAD       0.6501       0.6501       0.6401       +1.00%
 PRAD       0.7262       0.7262       0.8092       -8.30%
 ```
 
-### Step 3: Reproduce Paper Figures
+### Step 4: Reproduce Paper Figures
+
+**数据流 (学术诚信保证):**
+```
+模型文件 (models/*.pt)
+    ↓
+generate_evaluation_results.py
+    ↓
+results/improved_gnaft_evaluation.csv
+    ↓
+create_paper_figure*.py → paper_figures/*.png
+```
 
 ```bash
-# Figure 1: Generalization Analysis
+# Figure 1: Generalization Analysis (从 CSV 读取数据)
 python scripts/create_paper_figure1.py
 
 # Figure 3: Mechanism (Batch Effect Elimination)
