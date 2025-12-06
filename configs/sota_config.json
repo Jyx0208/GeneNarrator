@@ -1,0 +1,74 @@
+{
+    "experiment_name": "Improved_GN-AFT_SOTA_5Cancer",
+    "description": "5 Cancer Types - Improved GN-AFT with better performance",
+    "created_date": "2025-12-06",
+    "version": "2.0",
+    "improvement_note": "\u4f7f\u7528\u66f4\u6df1\u7684\u7f16\u7801\u5668\u3001\u6807\u7b7e\u5e73\u6ed1\u3001\u6392\u5e8f\u635f\u5931\u4f18\u5316",
+    "global_settings": {
+        "n_genes": 1000,
+        "batch_size": 64,
+        "max_epochs": 200,
+        "patience": 30,
+        "hidden_dim": 256,
+        "text_dim": 1024,
+        "dropout": 0.35,
+        "model_type": "ImprovedGNAFT"
+    },
+    "cancer_configs": {
+        "LIHC": {
+            "seed": 6,
+            "dropout": 0.35,
+            "learning_rate": 5e-05,
+            "weight_decay": 0.001,
+            "train_dataset": "TCGA-LIHC",
+            "test_dataset": "LIRI-JP",
+            "expected_external": 0.8038,
+            "old_sota": 0.7645,
+            "improvement": "+3.93%"
+        },
+        "BRCA": {
+            "seed": 7,
+            "dropout": 0.35,
+            "learning_rate": 5e-05,
+            "weight_decay": 0.001,
+            "train_dataset": "TCGA-BRCA",
+            "test_dataset": "GSE20685",
+            "expected_external": 0.7015,
+            "old_sota": 0.6844,
+            "improvement": "+1.71%"
+        },
+        "OV": {
+            "seed": 17,
+            "dropout": 0.35,
+            "learning_rate": 5e-05,
+            "weight_decay": 0.001,
+            "train_dataset": "TCGA-OV",
+            "test_dataset": "OV-AU",
+            "expected_external": 0.6421,
+            "old_sota": 0.6193,
+            "improvement": "+2.28%"
+        },
+        "PAAD": {
+            "seed": 4,
+            "dropout": 0.35,
+            "learning_rate": 5e-05,
+            "weight_decay": 0.001,
+            "train_dataset": "TCGA-PAAD",
+            "test_dataset": "PACA-CA",
+            "expected_external": 0.6398,
+            "old_sota": 0.6401,
+            "improvement": "+-0.03%"
+        },
+        "PRAD": {
+            "seed": 3,
+            "dropout": 0.35,
+            "learning_rate": 5e-05,
+            "weight_decay": 0.001,
+            "train_dataset": "TCGA-PRAD",
+            "test_dataset": "PRAD-CA",
+            "expected_external": 0.8646,
+            "old_sota": 0.8092,
+            "improvement": "+5.54%"
+        }
+    }
+}
