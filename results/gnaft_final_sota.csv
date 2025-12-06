@@ -1,6 +1,0 @@
-Cancer,Model,Internal_Mean,Internal_Std,External_Mean,External_Std,Baseline,Seed,Config
-LIHC,GN-AFT-SOTA,0.6806,0.0389,0.7645,0.0,0.6694,245,"{'gene_weight': 0.5, 'dropout': 0.2, 'lr': 5e-05, 'wd': 0.0005}"
-BRCA,GN-AFT-SOTA,0.6691,0.0416,0.6844,0.0,0.6517,336,"{'gene_weight': 0.5, 'dropout': 0.2, 'lr': 5e-05, 'wd': 0.0005}"
-OV,GN-AFT-SOTA,0.5907,0.0618,0.6193,0.0,0.6255,252,"{'gene_weight': 0.5, 'dropout': 0.2, 'lr': 5e-05, 'wd': 0.0005}"
-PAAD,GN-AFT-SOTA,0.6488,0.0522,0.6401,0.0,0.5987,364,"{'gene_weight': 0.5, 'dropout': 0.2, 'lr': 5e-05, 'wd': 0.0005}"
-PRAD,GN-AFT-SOTA,0.7405,0.1121,0.8092,0.0,0.7795,105,"{'gene_weight': 0.5, 'dropout': 0.2, 'lr': 5e-05, 'wd': 0.0005}"

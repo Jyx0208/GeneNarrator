@@ -23,6 +23,8 @@ models/*.pt
 # =============================================================================
 results/*.png
 results/*.pdf
+paper_figures/*.png
+paper_figures/*.pdf
 
 # 保留CSV结果文件 (实验记录，体积小)
 # !results/*.csv
