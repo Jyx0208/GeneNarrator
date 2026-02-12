@@ -65,6 +65,6 @@
     "how_to_get_results": {
         "step1": "Run: python scripts/generate_evaluation_results.py",
         "step2": "Check: results/improved_gnaft_evaluation.csv",
-        "step3": "Generate figures: python scripts/create_paper_figure*.py"
+        "step3": "Use results/improved_gnaft_evaluation.csv for downstream analysis"
     }
 }

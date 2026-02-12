@@ -8,7 +8,6 @@ This repository contains the code and reproducible workflow for GeneNarrator (GN
 
 - Core data loading and preprocessing modules
 - Training, model saving, and evaluation scripts
-- Figure generation scripts for manuscript figures
 - Reproducible benchmark result CSV files
 
 ## Model overview
@@ -54,10 +53,7 @@ GeneNarrator/
     ├── evaluate_sota.py
     ├── generate_evaluation_results.py
     ├── load_improved_models.py
-    ├── improved_gnaft_sota.py
-    ├── create_paper_figure1.py
-    ├── create_paper_figure3.py
-    └── create_paper_figure4.py
+    └── improved_gnaft_sota.py
 ```
 
 ## Installation
@@ -81,10 +77,10 @@ Supported cohorts in this release focus on LIHC, BRCA, OV, and PAAD.
 ## Typical workflow
 
 ```bash
-# Default: evaluate + figures
+# Default: evaluate
 python run_paper_experiments.py
 
-# Full pipeline: setup + training + evaluation + figures
+# Full pipeline: setup + training + evaluation
 python run_paper_experiments.py --full
 ```
 

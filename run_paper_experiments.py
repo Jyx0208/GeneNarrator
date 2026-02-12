@@ -3,9 +3,8 @@
 GeneNarrator experiment runner.
 
 Examples:
-  python run_paper_experiments.py              # evaluate + figures
-  python run_paper_experiments.py --full       # setup + train + evaluate + figures
-  python run_paper_experiments.py --figures-only
+  python run_paper_experiments.py              # evaluate
+  python run_paper_experiments.py --full       # setup + train + evaluate
   python run_paper_experiments.py --evaluate-only
 """
 
@@ -36,16 +35,11 @@ def run_script(script_name: str) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run GeneNarrator reproducible workflow")
-    parser.add_argument("--full", action="store_true", help="Run setup + train + evaluate + figures")
+    parser.add_argument("--full", action="store_true", help="Run setup + train + evaluate")
     parser.add_argument("--setup-data", action="store_true", help="Run data setup step")
     parser.add_argument("--train", action="store_true", help="Run model training")
     parser.add_argument("--evaluate-only", action="store_true", help="Run evaluation only")
-    parser.add_argument("--figures-only", action="store_true", help="Run figure generation only")
     args = parser.parse_args()
-
-    if args.evaluate_only and args.figures_only:
-        print("[ERROR] --evaluate-only and --figures-only cannot be used together")
-        return 2
 
     steps = []
 
@@ -54,29 +48,17 @@ def main() -> int:
             "setup_data.py",
             "train_from_scratch.py",
             "generate_evaluation_results.py",
-            "create_paper_figure1.py",
-            "create_paper_figure3.py",
-            "create_paper_figure4.py",
         ])
     elif args.evaluate_only:
         steps.append("generate_evaluation_results.py")
-    elif args.figures_only:
-        steps.extend([
-            "create_paper_figure1.py",
-            "create_paper_figure3.py",
-            "create_paper_figure4.py",
-        ])
     else:
         if args.setup_data:
             steps.append("setup_data.py")
         if args.train:
             steps.append("train_from_scratch.py")
-        # default: evaluate + figures
+        # default: evaluate
         steps.extend([
             "generate_evaluation_results.py",
-            "create_paper_figure1.py",
-            "create_paper_figure3.py",
-            "create_paper_figure4.py",
         ])
 
     ok = True
