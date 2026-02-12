@@ -1,4 +1,5 @@
-# GN-AFT Requirements
+# GeneNarrator Paper Experiments Requirements
+# ============================================
 # Install: pip install -r requirements.txt
 
 # Core
@@ -9,6 +10,7 @@ scikit-learn>=1.0.0
 
 # Survival Analysis
 lifelines>=0.27.0
+scikit-survival>=0.21.0    # Random Survival Forest
 
 # Visualization
 matplotlib>=3.5.0

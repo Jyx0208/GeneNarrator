@@ -144,7 +144,6 @@ CANCER_PAIRS = {
     'BRCA': ('TCGA-BRCA', 'GSE20685'),
     'OV': ('TCGA-OV', 'OV-AU'),  # 卵巢癌：TCGA 训练，ICGC 澳大利亚验证
     'PAAD': ('TCGA-PAAD', 'PACA-CA'),
-    'PRAD': ('TCGA-PRAD', 'PRAD-CA'),
 }
 
 

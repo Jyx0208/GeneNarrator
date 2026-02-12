@@ -1,8 +1,8 @@
 {
-    "experiment_name": "GN-AFT_SOTA_5Cancer",
-    "description": "5 Cancer Types - GN-AFT Survival Prediction with LLM Text Embedding",
+    "experiment_name": "GN-AFT_SOTA_4Cancer",
+    "description": "4 Cancer Types - GN-AFT Survival Prediction with LLM Text Embedding",
     "created_date": "2025-12-06",
-    "version": "2.0",
+    "version": "2.1",
     "model_note": "Improved GN-AFT with deeper encoders, label smoothing, and ranking loss",
     
     "academic_integrity": {
@@ -43,7 +43,7 @@
             "model_file": "models/improved_gnaft_brca_sota.pt"
         },
         "OV": {
-            "seed": 17,
+            "seed": 79,
             "dropout": 0.35,
             "learning_rate": 5e-05,
             "weight_decay": 0.001,
@@ -59,15 +59,6 @@
             "train_dataset": "TCGA-PAAD",
             "test_dataset": "PACA-CA",
             "model_file": "models/improved_gnaft_paad_sota.pt"
-        },
-        "PRAD": {
-            "seed": 3,
-            "dropout": 0.35,
-            "learning_rate": 5e-05,
-            "weight_decay": 0.001,
-            "train_dataset": "TCGA-PRAD",
-            "test_dataset": "PRAD-CA",
-            "model_file": "models/improved_gnaft_prad_sota.pt"
         }
     },
     
