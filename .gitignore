@@ -1,0 +1,55 @@
+# GeneNarrator - .gitignore
+
+# Data & models (large files)
+data/
+models/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+build/
+dist/
+venv/
+.venv/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+*.Zone.Identifier
+
+# Environment variables
+.env
+.env.*
+
+# Generated outputs
+results/
+paper_results/
+paper_figures/
+paper_figures_final/
+
+# Large intermediate files
+*.pkl
+*.h5
+*.npy
+*.npz
+*.log
+
+# LaTeX
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.out
+*.toc
+*.synctex.gz
+
+# Paper drafts & local libs
+论文撰写/
+.local_lib/
