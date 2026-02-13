@@ -74,15 +74,6 @@ DATASET_CONFIGS = {
         is_training=True,
         gene_id_type='ensembl'
     ),
-    'TCGA-PRAD': DatasetConfig(
-        name='TCGA-PRAD',
-        expr_file='TCGA-PRAD.star_fpkm.tsv.gz',
-        surv_file='TCGA-PRAD.survival.tsv.gz',
-        embed_file='TCGA-PRAD_embeddings_v5.pt',
-        report_file='TCGA-PRAD_reports_v5.txt',
-        is_training=True,
-        gene_id_type='ensembl'
-    ),
     
     # ===== 外部验证集 =====
     'LIRI-JP': DatasetConfig(
@@ -120,15 +111,6 @@ DATASET_CONFIGS = {
         report_file='PACA-CA_reports_v5.txt',
         is_training=False,
         gene_id_type='ensembl'
-    ),
-    'PRAD-CA': DatasetConfig(
-        name='PRAD-CA',
-        expr_file='PRAD-CA.star_fpkm.tsv.gz',
-        surv_file='PRAD-CA.survival.tsv.gz',
-        embed_file='PRAD-CA_embeddings_v5.pt',
-        report_file='PRAD-CA_reports_v5.txt',
-        is_training=False,
-        gene_id_type='symbol'  # PRAD-CA 使用 Gene Symbol
     ),
 }
 

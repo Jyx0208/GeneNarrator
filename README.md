@@ -2,24 +2,17 @@
 
 **Bridging Genomic and Semantic Spaces: A Multimodal Framework for Cross-Cohort Cancer Survival Prediction**
 
-This repository contains the code and reproducible workflow for GeneNarrator (GN-AFT), a multimodal survival model that fuses gene expression and LLM-derived semantic embeddings.
-
-## What is included
-
-- Core data loading and preprocessing modules
-- Training, model saving, and evaluation scripts
-- Figure generation scripts for manuscript figures
-- Reproducible benchmark result CSV files
+This repository contains the code for GeneNarrator (GN-AFT), a multimodal survival model that fuses gene expression data and LLM-derived semantic embeddings for cross-cohort cancer survival prediction.
 
 ## Model overview
 
-GN-AFT has three components:
+GN-AFT consists of three components:
 
-1. **Gene encoder** for transcriptomic features
-2. **Semantic encoder** for 1024-d text embeddings from LLM-generated reports
-3. **Adaptive gate** to fuse genomic and semantic representations
+1. **Gene encoder** -- processes transcriptomic features via a three-layer MLP
+2. **Semantic encoder** -- processes 1024-d text embeddings from LLM-generated patient reports
+3. **Adaptive fusion gate** -- learns modality-specific quality weights via cross-attention
 
-The model is optimized with an AFT objective and ranking-aware supervision.
+The model is optimised with a Weibull AFT objective and evaluated on external validation cohorts.
 
 ## External validation performance (C-index)
 
@@ -33,31 +26,19 @@ The model is optimized with an AFT objective and ranking-aware supervision.
 
 ## Repository structure
 
-```text
+```
 GeneNarrator/
 ├── .gitignore
 ├── LICENSE
 ├── README.md
 ├── requirements.txt
-├── run_paper_experiments.py
-├── unified_data.py
-├── configs/
-│   └── sota_config.json
-├── results/
-│   ├── five_cancer_full_benchmark.csv
-│   └── improved_gnaft_evaluation.csv
+├── run_paper_experiments.py          # orchestrates the full workflow
+├── unified_data.py                   # data loading & gene alignment
 └── scripts/
-    ├── preprocess_embeddings.py
-    ├── setup_data.py
-    ├── train_from_scratch.py
-    ├── save_improved_sota.py
-    ├── evaluate_sota.py
-    ├── generate_evaluation_results.py
-    ├── load_improved_models.py
-    ├── improved_gnaft_sota.py
-    ├── create_paper_figure1.py
-    ├── create_paper_figure3.py
-    └── create_paper_figure4.py
+    ├── preprocess_embeddings.py      # LLM report generation & embedding
+    ├── setup_data.py                 # copy data files into data/
+    ├── train_from_scratch.py         # model training
+    └── generate_evaluation_results.py  # evaluate saved models
 ```
 
 ## Installation
@@ -68,27 +49,34 @@ cd GeneNarrator
 pip install -r requirements.txt
 ```
 
-## Data requirements
+## Data
 
-Place data under `data/` (directory is gitignored):
+Place data files under `data/` (directory is git-ignored).  Required files per cohort:
 
-- `{dataset}.star_fpkm.tsv.gz`
-- `{dataset}.survival.tsv.gz`
-- `{dataset}_embeddings_v5.pt`
+- `{cohort}.star_fpkm.tsv.gz` -- gene expression matrix
+- `{cohort}.survival.tsv.gz` -- survival annotation
+- `{cohort}_embeddings_v5.pt` -- pre-computed text embeddings
+- `{cohort}_reports_v5.txt` -- LLM-generated reports
 
-Supported cohorts in this release focus on LIHC, BRCA, OV, and PAAD.
+Training cohorts: TCGA-LIHC, TCGA-BRCA, TCGA-OV, TCGA-PAAD
+Validation cohorts: LIRI-JP, GSE20685, OV-AU, PACA-CA
 
-## Typical workflow
+## Workflow
 
 ```bash
-# Default: evaluate + figures
+# Full pipeline: data setup -> training -> evaluation
+python run_paper_experiments.py --full
+
+# Train and evaluate
 python run_paper_experiments.py
 
-# Full pipeline: setup + training + evaluation + figures
-python run_paper_experiments.py --full
+# Evaluate pre-trained models only
+python run_paper_experiments.py --evaluate-only
 ```
 
-## Embedding generation (LLM)
+## Embedding generation
+
+Generating text embeddings requires a DashScope API key:
 
 ```bash
 export DASHSCOPE_API_KEY="your-api-key"
@@ -98,14 +86,17 @@ python scripts/preprocess_embeddings.py
 ## Citation
 
 ```bibtex
-@article{jiang2026genenarrrator,
-  title={Bridging Genomic and Semantic Spaces: A Multimodal Framework for Cross-Cohort Cancer Survival Prediction},
-  author={Jiang, Yuxuan and Zhou, Xuancheng and Jiang, Lai and Huang, Gang and Gu, Yuheng and Yin, Shiyang and Wang, Lexin and Xu, Ke and Li, Xiaosong and Chi, Hao and Deng, Youping},
-  journal={npj Digital Medicine},
-  year={2026}
+@article{jiang2026genenarrator,
+  title   = {Bridging Genomic and Semantic Spaces: A Multimodal Framework
+             for Cross-Cohort Cancer Survival Prediction},
+  author  = {Jiang, Yuxuan and Zhou, Xuancheng and Jiang, Lai and
+             Huang, Gang and Gu, Yuheng and Yin, Shiyang and Wang, Lexin
+             and Xu, Ke and Li, Xiaosong and Chi, Hao and Deng, Youping},
+  journal = {npj Digital Medicine},
+  year    = {2026}
 }
 ```
 
 ## License
 
-MIT License.
+MIT License

@@ -1,6 +1,0 @@
-cancer,model,model_file,seed,train_dataset,test_dataset,train_samples,test_samples,internal_ci,external_ci,expected_ci,ci_match
-LIHC,Improved-GN-AFT,models/improved_gnaft_lihc_sota.pt,6,TCGA-LIHC,LIRI-JP,418,232,0.8913725887296846,0.791038283062645,0.791038283062645,True
-BRCA,Improved-GN-AFT,models/improved_gnaft_brca_sota.pt,7,TCGA-BRCA,GSE20685,1203,327,0.9081288981288981,0.6971119647175985,0.6971119647175985,True
-OV,Improved-GN-AFT,models/improved_gnaft_ov_sota.pt,17,TCGA-OV,OV-AU,428,93,0.7861701739669572,0.6341398564211645,0.6341398564211645,True
-PAAD,Improved-GN-AFT,models/improved_gnaft_paad_sota.pt,4,TCGA-PAAD,PACA-CA,182,186,0.8182464695722849,0.6500875429608974,0.6500875429608974,True
-PRAD,Improved-GN-AFT,models/improved_gnaft_prad_sota.pt,3,TCGA-PRAD,PRAD-CA,554,137,0.64177131526768,0.7261538461538461,0.7261538461538461,True

@@ -1,6 +1,4 @@
-# GeneNarrator - .gitignore
-
-# Data & models (large files)
+# Data & models (large files, not distributed via git)
 data/
 models/
 
@@ -22,12 +20,13 @@ venv/
 .DS_Store
 Thumbs.db
 *.Zone.Identifier
+.msys*
 
 # Environment variables
 .env
 .env.*
 
-# Generated outputs
+# Generated outputs (reproduce via scripts)
 results/
 paper_results/
 paper_figures/
@@ -50,6 +49,7 @@ paper_figures_final/
 *.toc
 *.synctex.gz
 
-# Paper drafts & local libs
-论文撰写/
+# Internal directories (not for public release)
+release-old/
 .local_lib/
+论文撰写/

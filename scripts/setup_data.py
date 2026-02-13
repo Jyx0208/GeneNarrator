@@ -53,14 +53,6 @@ REQUIRED_FILES = [
     'PACA-CA.survival.tsv.gz',
     'PACA-CA_embeddings_v5.pt',
     
-    # PRAD
-    'TCGA-PRAD.star_fpkm.tsv.gz',
-    'TCGA-PRAD.survival.tsv.gz',
-    'TCGA-PRAD_embeddings_v5.pt',
-    'PRAD-CA.star_fpkm.tsv.gz',
-    'PRAD-CA.survival.tsv.gz',
-    'PRAD-CA_embeddings_v5.pt',
-    
     # 基因ID映射
     'gene_id_mapping.csv',
 ]

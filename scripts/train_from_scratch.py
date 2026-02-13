@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 """
-GN-AFT 从头训练脚本
-==================
+GN-AFT Training Script
+======================
 
-用法:
-    python scripts/train_from_scratch.py              # 训练所有5个癌种
-    python scripts/train_from_scratch.py --cancer LIHC   # 训练单个癌种
-    python scripts/train_from_scratch.py --cancer LIHC --seed 6  # 指定seed
+Train the GN-AFT model from scratch on four cancer types
+(LIHC, BRCA, OV, PAAD).
+
+Usage:
+    python scripts/train_from_scratch.py                    # train all 4 cancers
+    python scripts/train_from_scratch.py --cancer LIHC      # train single cancer
+    python scripts/train_from_scratch.py --seed 42          # custom seed
 """
 
 import os
@@ -33,23 +36,14 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Device: {DEVICE}")
 
 # =============================================================================
-# SOTA配置
+# Default seeds (one per cancer type, used for reproducibility)
 # =============================================================================
 
-SOTA_SEEDS = {
-    'LIHC': 6,
-    'BRCA': 7,
-    'OV': 17,
-    'PAAD': 4,
-    'PRAD': 3,
-}
-
-EXPECTED_CI = {
-    'LIHC': 0.8038,
-    'BRCA': 0.7015,
-    'OV': 0.6421,
-    'PAAD': 0.6398,
-    'PRAD': 0.8646,
+DEFAULT_SEEDS = {
+    'LIHC': 42,
+    'BRCA': 42,
+    'OV': 42,
+    'PAAD': 42,
 }
 
 # =============================================================================
@@ -277,9 +271,9 @@ def evaluate_model(model, test_data):
 # =============================================================================
 
 def train_cancer(cancer_type, seed=None, config=None, save_model=True):
-    """训练单个癌种"""
+    """Train a single cancer type."""
     if seed is None:
-        seed = SOTA_SEEDS.get(cancer_type, 42)
+        seed = DEFAULT_SEEDS.get(cancer_type, 42)
     
     if config is None:
         config = {
@@ -320,12 +314,9 @@ def train_cancer(cancer_type, seed=None, config=None, save_model=True):
     
     # 评估
     ci = evaluate_model(model, test_data)
-    expected = EXPECTED_CI.get(cancer_type, 0)
     
-    print(f"\n  结果:")
+    print(f"\n  Results:")
     print(f"    External C-Index: {ci:.4f}")
-    print(f"    期望值: {expected:.4f}")
-    print(f"    差异: {(ci - expected) * 100:+.2f}%")
     
     # 保存模型
     if save_model:
@@ -344,7 +335,6 @@ def train_cancer(cancer_type, seed=None, config=None, save_model=True):
             },
             'performance': {
                 'external_ci': ci,
-                'expected_ci': expected,
             },
             'created_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }, save_path)
@@ -388,7 +378,6 @@ def main():
     print(f"Config: {config}")
     
     if args.cancer:
-        # 训练单个癌种
         train_cancer(
             args.cancer.upper(),
             seed=args.seed,
@@ -396,34 +385,30 @@ def main():
             save_model=not args.no_save
         )
     else:
-        # 训练所有癌种
         results = {}
         
-        for cancer in SOTA_SEEDS.keys():
+        for cancer in CANCER_PAIRS.keys():
+            seed = DEFAULT_SEEDS.get(cancer, 42)
             ci, _ = train_cancer(
                 cancer,
-                seed=SOTA_SEEDS[cancer],
+                seed=seed,
                 config=config,
                 save_model=not args.no_save
             )
             results[cancer] = ci
         
-        # 汇总
         print("\n" + "="*60)
-        print("训练结果汇总")
+        print("Training Summary")
         print("="*60)
-        print(f"{'Cancer':<10} {'C-Index':<12} {'Expected':<12} {'Diff':<10}")
-        print("-"*45)
+        print(f"{'Cancer':<10} {'C-Index':<12}")
+        print("-"*25)
         
         for cancer, ci in results.items():
-            expected = EXPECTED_CI[cancer]
-            diff = (ci - expected) * 100
-            print(f"{cancer:<10} {ci:.4f}       {expected:.4f}       {diff:+.2f}%")
+            print(f"{cancer:<10} {ci:.4f}")
         
         avg_ci = np.mean(list(results.values()))
-        avg_expected = np.mean(list(EXPECTED_CI.values()))
-        print("-"*45)
-        print(f"{'Average':<10} {avg_ci:.4f}       {avg_expected:.4f}")
+        print("-"*25)
+        print(f"{'Average':<10} {avg_ci:.4f}")
 
 
 if __name__ == '__main__':
