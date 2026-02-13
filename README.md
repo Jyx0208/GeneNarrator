@@ -85,4 +85,4 @@ python scripts/preprocess_embeddings.py
 
 ## License
 
-MIT License
+GPL-3.0 License
