@@ -83,20 +83,6 @@ export DASHSCOPE_API_KEY="your-api-key"
 python scripts/preprocess_embeddings.py
 ```
 
-## Citation
-
-```bibtex
-@article{jiang2026genenarrator,
-  title   = {Bridging Genomic and Semantic Spaces: A Multimodal Framework
-             for Cross-Cohort Cancer Survival Prediction},
-  author  = {Jiang, Yuxuan and Zhou, Xuancheng and Jiang, Lai and
-             Huang, Gang and Gu, Yuheng and Yin, Shiyang and Wang, Lexin
-             and Xu, Ke and Li, Xiaosong and Chi, Hao and Deng, Youping},
-  journal = {npj Digital Medicine},
-  year    = {2026}
-}
-```
-
 ## License
 
 MIT License
