@@ -1,0 +1,461 @@
+#!/usr/bin/env python
+"""
+GN-AFT Training Script
+======================
+
+Train the GN-AFT model from scratch on four cancer types
+(LIHC, BRCA, OV, PAAD).
+
+Usage:
+    python scripts/train_from_scratch.py                    # train all 4 cancers
+    python scripts/train_from_scratch.py --cancer LIHC      # train single cancer
+    python scripts/train_from_scratch.py --seed 42          # custom seed
+"""
+
+import os
+import sys
+import argparse
+import json
+from datetime import datetime
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_BASE_DIR = os.path.dirname(_SCRIPT_DIR)
+sys.path.insert(0, _BASE_DIR)
+os.chdir(_BASE_DIR)
+
+import torch
+import torch.nn as nn
+import numpy as np
+from sklearn.model_selection import train_test_split
+from lifelines.utils import concordance_index
+import warnings
+warnings.filterwarnings('ignore')
+
+from unified_data import load_cancer_data, set_random_seed, CANCER_PAIRS
+
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"Device: {DEVICE}")
+
+# =============================================================================
+# Fixed default seed for reproducibility (no seed search)
+# =============================================================================
+
+DEFAULT_SEED = 42
+
+# =============================================================================
+# 模型定义
+# =============================================================================
+
+class ImprovedGNAFT(nn.Module):
+    """GN-AFT模型"""
+    
+    def __init__(self, gene_dim=1000, text_dim=1024, hidden_dim=256, dropout=0.35):
+        super().__init__()
+        
+        self.gene_encoder = nn.Sequential(
+            nn.Linear(gene_dim, 512),
+            nn.BatchNorm1d(512),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(512, 384),
+            nn.BatchNorm1d(384),
+            nn.GELU(),
+            nn.Dropout(dropout * 0.8),
+            nn.Linear(384, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.GELU(),
+        )
+        
+        self.text_encoder = nn.Sequential(
+            nn.Linear(text_dim, 512),
+            nn.BatchNorm1d(512),
+            nn.GELU(),
+            nn.Dropout(dropout * 0.6),
+            nn.Linear(512, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.GELU(),
+        )
+        
+        self.gene_gate = nn.Sequential(
+            nn.Linear(hidden_dim, 64), nn.Tanh(), nn.Linear(64, 1), nn.Sigmoid()
+        )
+        self.text_gate = nn.Sequential(
+            nn.Linear(hidden_dim, 64), nn.Tanh(), nn.Linear(64, 1), nn.Sigmoid()
+        )
+        
+        self.g2t_attn = nn.MultiheadAttention(hidden_dim, num_heads=4, dropout=0.1, batch_first=True)
+        self.t2g_attn = nn.MultiheadAttention(hidden_dim, num_heads=4, dropout=0.1, batch_first=True)
+        
+        self.ln_g = nn.LayerNorm(hidden_dim)
+        self.ln_t = nn.LayerNorm(hidden_dim)
+        
+        self.fusion = nn.Sequential(
+            nn.Linear(hidden_dim * 3, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout * 0.5),
+        )
+        
+        self.aft_head = nn.Sequential(
+            nn.Linear(hidden_dim, 128),
+            nn.GELU(),
+            nn.Dropout(0.15),
+            nn.Linear(128, 64),
+            nn.GELU(),
+            nn.Linear(64, 2)
+        )
+        
+        nn.init.constant_(self.aft_head[-1].bias[0], 6.9)
+        nn.init.constant_(self.aft_head[-1].bias[1], 0.4)
+    
+    def forward(self, gene, text):
+        g = self.gene_encoder(gene)
+        t = self.text_encoder(text)
+        
+        g_gate = self.gene_gate(g)
+        t_gate = self.text_gate(t)
+        
+        gate_sum = g_gate + t_gate + 1e-8
+        w_g = g_gate / gate_sum
+        w_t = t_gate / gate_sum
+        
+        g_seq = g.unsqueeze(1)
+        t_seq = t.unsqueeze(1)
+        
+        g2t, _ = self.g2t_attn(g_seq, t_seq, t_seq)
+        t2g, _ = self.t2g_attn(t_seq, g_seq, g_seq)
+        
+        g_enhanced = self.ln_g((g_seq + g2t).squeeze(1))
+        t_enhanced = self.ln_t((t_seq + t2g).squeeze(1))
+        
+        weighted = w_g * g_enhanced + w_t * t_enhanced
+        concat = torch.cat([weighted, g_enhanced, t_enhanced], dim=-1)
+        fused = self.fusion(concat) + weighted
+        
+        params = self.aft_head(fused)
+        scale = torch.exp(torch.clamp(params[:, 0], 3.5, 8.5))
+        shape = 0.5 + 3.0 * torch.sigmoid(params[:, 1])
+        
+        return scale, shape
+    
+    def predict_median(self, gene, text):
+        scale, shape = self.forward(gene, text)
+        ln2 = torch.log(torch.tensor(2.0, device=scale.device))
+        return scale * (ln2 ** (1.0 / shape))
+
+
+# =============================================================================
+# 损失函数
+# =============================================================================
+
+def weibull_loss(scale, shape, time, event, reg=0.01):
+    eps = 1e-8
+    scale = torch.clamp(scale, min=1.0)
+    shape = torch.clamp(shape, min=0.1)
+    time = torch.clamp(time, min=1.0)
+    
+    z = (time / scale) ** shape
+    log_f = torch.log(shape + eps) - torch.log(scale + eps) + \
+            (shape - 1) * (torch.log(time + eps) - torch.log(scale + eps)) - z
+    log_S = -z
+    
+    # 标签平滑
+    smooth_event = event * 0.95 + 0.025
+    nll = -torch.mean(smooth_event * log_f + (1 - smooth_event) * log_S)
+    
+    reg_scale = reg * torch.mean((torch.log(scale) - 6.5)**2)
+    reg_shape = reg * torch.mean((shape - 1.5)**2)
+    
+    return nll + reg_scale + reg_shape
+
+
+# =============================================================================
+# 训练函数
+# =============================================================================
+
+def train_model(model, train_data, val_data, config):
+    """训练模型"""
+    epochs = config.get('epochs', 200)
+    lr = config.get('lr', 5e-5)
+    batch_size = config.get('batch_size', 64)
+    patience = config.get('patience', 30)
+    
+    train_gene = torch.FloatTensor(train_data['gene'])
+    train_text = torch.FloatTensor(train_data['text'])
+    train_time = torch.FloatTensor(train_data['time'])
+    train_event = torch.FloatTensor(train_data['event'])
+    
+    val_gene = torch.FloatTensor(val_data['gene']).to(DEVICE)
+    val_text = torch.FloatTensor(val_data['text']).to(DEVICE)
+    val_time = val_data['time']
+    val_event = val_data['event']
+    
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-3)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=40, T_mult=2)
+    
+    best_ci = 0
+    best_state = None
+    patience_counter = 0
+    
+    for epoch in range(epochs):
+        model.train()
+        perm = np.random.permutation(len(train_gene))
+        
+        for i in range(0, len(train_gene), batch_size):
+            idx = perm[i:i+batch_size]
+            batch_gene = train_gene[idx].to(DEVICE)
+            batch_text = train_text[idx].to(DEVICE)
+            batch_time = train_time[idx].to(DEVICE)
+            batch_event = train_event[idx].to(DEVICE)
+            
+            optimizer.zero_grad()
+            scale, shape = model(batch_gene, batch_text)
+            loss = weibull_loss(scale, shape, batch_time, batch_event)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+            optimizer.step()
+        
+        scheduler.step()
+        
+        if epoch % 5 == 0:
+            model.eval()
+            with torch.no_grad():
+                pred = model.predict_median(val_gene, val_text)
+                risk = 1.0 / (pred.cpu().numpy() + 1e-8)
+            
+            try:
+                ci = concordance_index(val_time, -risk, val_event)
+            except:
+                ci = 0.5
+            
+            if ci > best_ci:
+                best_ci = ci
+                best_state = {k: v.clone() for k, v in model.state_dict().items()}
+                patience_counter = 0
+            else:
+                patience_counter += 1
+            
+            if epoch % 20 == 0:
+                print(f"    Epoch {epoch}: Val CI = {ci:.4f}, Best = {best_ci:.4f}")
+            
+            if patience_counter >= patience // 5:
+                print(f"    Early stopping at epoch {epoch}")
+                break
+    
+    if best_state:
+        model.load_state_dict(best_state)
+    
+    return best_ci
+
+
+def evaluate_model(model, test_data):
+    """评估模型"""
+    model.eval()
+    
+    test_gene = torch.FloatTensor(test_data['gene']).to(DEVICE)
+    test_text = torch.FloatTensor(test_data['text']).to(DEVICE)
+    
+    with torch.no_grad():
+        pred = model.predict_median(test_gene, test_text)
+        risk = 1.0 / (pred.cpu().numpy() + 1e-8)
+    
+    return concordance_index(test_data['time'], -risk, test_data['event'])
+
+
+def split_development_data(data, validation_fraction=0.2, seed=42):
+    """Create a patient-level development split without consulting external data."""
+    indices = np.arange(len(data['gene']))
+    stratify = data['event'] if len(np.unique(data['event'])) > 1 else None
+    fit_idx, val_idx = train_test_split(
+        indices,
+        test_size=validation_fraction,
+        random_state=seed,
+        stratify=stratify,
+    )
+
+    def subset(selected):
+        result = {}
+        for key, value in data.items():
+            if key in {'gene', 'text', 'time', 'event', 'sample_ids'}:
+                array = np.asarray(value)
+                result[key] = array[selected]
+            else:
+                result[key] = value
+        return result
+
+    return subset(fit_idx), subset(val_idx)
+
+
+# =============================================================================
+# 训练单个癌种
+# =============================================================================
+
+def train_cancer(cancer_type, seed=None, config=None, save_model=True):
+    """Train a single cancer type."""
+    if seed is None:
+        seed = DEFAULT_SEED
+    
+    if config is None:
+        config = {
+            'epochs': 200,
+            'lr': 5e-5,
+            'batch_size': 64,
+            'patience': 30,
+            'hidden_dim': 256,
+            'dropout': 0.35,
+            'validation_fraction': 0.2,
+        }
+    
+    print(f"\n{'='*60}")
+    print(f"训练 {cancer_type} (seed={seed})")
+    print("="*60)
+    
+    set_random_seed(seed)
+    
+    # 加载数据
+    train_data, test_data, info = load_cancer_data(cancer_type, n_genes=1000)
+    
+    gene_dim = train_data['gene'].shape[1]
+    text_dim = train_data['text'].shape[1]
+    
+    print(f"  训练集: {len(train_data['gene'])} 样本")
+    print(f"  测试集: {len(test_data['gene'])} 样本")
+    
+    # 创建模型
+    model = ImprovedGNAFT(
+        gene_dim=gene_dim,
+        text_dim=text_dim,
+        hidden_dim=config['hidden_dim'],
+        dropout=config['dropout']
+    ).to(DEVICE)
+    
+    # Split TCGA development data for model selection. The external cohort is
+    # never passed to train_model and is evaluated once after training.
+    fit_data, val_data = split_development_data(
+        train_data,
+        validation_fraction=config.get('validation_fraction', 0.2),
+        seed=seed,
+    )
+    print(f"  Development fit: {len(fit_data['gene'])} samples")
+    print(f"  Development validation: {len(val_data['gene'])} samples")
+    print("  Training...")
+    development_ci = train_model(model, fit_data, val_data, config)
+    
+    # 评估
+    target_ci = evaluate_model(model, test_data)
+    
+    print(f"\n  Results:")
+    print(f"    Development-validation C-index: {development_ci:.4f}")
+    print(f"    Target-cohort C-index: {target_ci:.4f}")
+    
+    # 保存模型
+    if save_model:
+        os.makedirs('models', exist_ok=True)
+        save_path = f'models/gnaft_{cancer_type.lower()}_corrected.pt'
+        
+        torch.save({
+            'model_state_dict': model.state_dict(),
+            'config': {
+                'gene_dim': gene_dim,
+                'text_dim': text_dim,
+                'hidden_dim': config['hidden_dim'],
+                'dropout': config['dropout'],
+                'seed': seed,
+                'cancer_type': cancer_type,
+                'validation_fraction': config.get('validation_fraction', 0.2),
+            },
+            'performance': {
+                'development_validation_ci': development_ci,
+                'target_cohort_ci': target_ci,
+            },
+            'protocol': {
+                'version': 'corrected-2026-08',
+                'target_outcomes_used_for_model_selection': False,
+                'target_feature_availability_used_for_feature_selection': False,
+                'target_evaluated_after_model_selection': True,
+            },
+            'feature_manifest': info.get('train_genes'),
+            'target_missing_feature_count': info.get('n_missing_external_features'),
+            'created_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }, save_path)
+        
+        print(f"  模型已保存: {save_path}")
+    
+    return target_ci, model
+
+
+# =============================================================================
+# 主函数
+# =============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(description='Train GN-AFT from scratch')
+    parser.add_argument('--cancer', type=str, default=None,
+                        help='Cancer type to train (e.g., LIHC). If not specified, train all.')
+    parser.add_argument('--seed', type=int, default=None,
+                        help='Random seed. If not specified, use the documented default seed.')
+    parser.add_argument('--epochs', type=int, default=200,
+                        help='Number of training epochs')
+    parser.add_argument('--lr', type=float, default=5e-5,
+                        help='Learning rate')
+    parser.add_argument('--validation-fraction', type=float, default=0.2,
+                        help='Fraction of TCGA development samples used for early stopping')
+    parser.add_argument('--no_save', action='store_true',
+                        help='Do not save model')
+    
+    args = parser.parse_args()
+    
+    config = {
+        'epochs': args.epochs,
+        'lr': args.lr,
+        'batch_size': 64,
+        'patience': 30,
+        'hidden_dim': 256,
+        'dropout': 0.35,
+        'validation_fraction': args.validation_fraction,
+    }
+    
+    print("="*60)
+    print("GN-AFT Training from Scratch")
+    print("="*60)
+    print(f"Config: {config}")
+    
+    if args.cancer:
+        train_cancer(
+            args.cancer.upper(),
+            seed=args.seed,
+            config=config,
+            save_model=not args.no_save
+        )
+    else:
+        results = {}
+        
+        for cancer in CANCER_PAIRS.keys():
+            seed = DEFAULT_SEED
+            ci, _ = train_cancer(
+                cancer,
+                seed=seed,
+                config=config,
+                save_model=not args.no_save
+            )
+            results[cancer] = ci
+        
+        print("\n" + "="*60)
+        print("Training Summary")
+        print("="*60)
+        print(f"{'Cancer':<10} {'C-Index':<12}")
+        print("-"*25)
+        
+        for cancer, ci in results.items():
+            print(f"{cancer:<10} {ci:.4f}")
+        
+        avg_ci = np.mean(list(results.values()))
+        print("-"*25)
+        print(f"{'Average':<10} {avg_ci:.4f}")
+
+
+if __name__ == '__main__':
+    main()
+
+
+
