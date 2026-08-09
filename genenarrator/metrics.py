@@ -6,7 +6,7 @@ from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 from lifelines.statistics import logrank_test
-from lifelines.utils import concordance_index
+from lifelines.utils import concordance_index, integrated_brier_score
 from sklearn.metrics import silhouette_score
 
 
@@ -17,6 +17,27 @@ def c_index(
 ) -> float:
     """Harrell's C-index (risk = 1 / predicted median survival)."""
     return float(concordance_index(time, -np.asarray(risk), event))
+
+
+def integrated_brier(
+    time: Sequence[float],
+    event: Sequence[int],
+    survival_predictions: np.ndarray,
+    horizon: Sequence[float],
+) -> float:
+    """Integrated Brier Score (IBS) over the given time grid (lower is better)."""
+    time = np.asarray(time, dtype=float)
+    event = np.asarray(event, dtype=float)
+    survival = np.asarray(survival_predictions, dtype=float)
+    if survival.ndim != 2 or survival.shape[0] != len(time):
+        raise ValueError("survival_predictions must be (n_samples, n_horizons)")
+    if survival.shape[1] != len(horizon):
+        raise ValueError("survival_predictions columns must match horizon length")
+    return float(
+        integrated_brier_score(
+            (time, event), survival.T, np.asarray(horizon, dtype=float)
+        )
+    )
 
 
 def bootstrap_ci(
