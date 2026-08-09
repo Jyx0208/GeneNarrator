@@ -5,8 +5,9 @@ from __future__ import annotations
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
+from lifelines import KaplanMeierFitter
 from lifelines.statistics import logrank_test
-from lifelines.utils import concordance_index, integrated_brier_score
+from lifelines.utils import concordance_index
 from sklearn.metrics import silhouette_score
 
 
@@ -25,19 +26,42 @@ def integrated_brier(
     survival_predictions: np.ndarray,
     horizon: Sequence[float],
 ) -> float:
-    """Integrated Brier Score (IBS) over the given time grid (lower is better)."""
+    """Integrated Brier Score over a time grid, inverse-probability-of-
+    censoring-weighted (IBS; lower is better).
+
+    BS(t) = mean over samples of:
+        S(t)^2 * 1{y <= t, delta = 1} / G(t)
+      + (1 - S(t))^2 * 1{y > t} / G(y)
+    where G(.) is the Kaplan-Meier estimate of the censoring distribution.
+    Integration uses the trapezoidal rule over [0, t_max].
+    """
     time = np.asarray(time, dtype=float)
     event = np.asarray(event, dtype=float)
     survival = np.asarray(survival_predictions, dtype=float)
+    horizon = np.asarray(horizon, dtype=float)
     if survival.ndim != 2 or survival.shape[0] != len(time):
         raise ValueError("survival_predictions must be (n_samples, n_horizons)")
     if survival.shape[1] != len(horizon):
         raise ValueError("survival_predictions columns must match horizon length")
-    return float(
-        integrated_brier_score(
-            (time, event), survival.T, np.asarray(horizon, dtype=float)
-        )
-    )
+    if not len(horizon):
+        raise ValueError("horizon must not be empty")
+
+    kmf = KaplanMeierFitter()
+    kmf.fit(time, event_observed=1.0 - event)
+    g_at_t = np.clip(kmf.survival_function_at_times(horizon).values, 1e-8, 1.0)
+    g_at_y = np.clip(kmf.survival_function_at_times(time).values, 1e-8, 1.0)
+
+    brier = []
+    for j, t in enumerate(horizon):
+        s = survival[:, j]
+        term1 = (s ** 2) * (time <= t) * event / g_at_t[j]
+        term2 = ((1.0 - s) ** 2) * (time > t) / g_at_y
+        brier.append(float(np.mean(term1 + term2)))
+
+    grid = np.concatenate([[0.0], horizon])
+    vals = np.concatenate([[0.0], np.asarray(brier)])
+    area = np.trapezoid(vals, grid) if hasattr(np, "trapezoid") else np.trapz(vals, grid)
+    return float(area / grid[-1])
 
 
 def bootstrap_ci(
