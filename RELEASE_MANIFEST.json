@@ -1,6 +1,6 @@
 {
   "version": "candidate-v1",
-  "public_deposit": false,
+  "public_deposit": true,
   "files": [
     {
       "path": "configs/multicancer_protocol_lock_example.json",
@@ -67,5 +67,7 @@
       "bytes": 60575,
       "sha256": "d7f6a08996bbb7e9333a52d0b9f16b2e28500aaf9530fbc8f8f54b716e4b0b34"
     }
-  ]
+  ],
+  "repository": "https://github.com/Jyx0208/GeneNarrator",
+  "commit": "0feb1a582b960046e265f6b149cc29fb47dfd420"
 }

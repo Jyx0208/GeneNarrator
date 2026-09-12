@@ -1,6 +1,6 @@
 # GeneNarrator
 
-GeneNarrator is a transcriptomic survival-prediction model combining gene-level expression and pathway-level representations. This repository is the minimal analysis release accompanying the manuscript.
+GeneNarrator is a transcriptomic survival-prediction model combining gene-level expression and pathway-level representations. This repository is the minimal analysis release accompanying the manuscript. The public repository is https://github.com/Jyx0208/GeneNarrator.
 
 ## Contents
 
@@ -14,7 +14,7 @@ Expression and survival records are not redistributed here. Obtain them from the
 
 ## Reproducibility
 
-Before publication, this repository will receive a tagged release containing the final environment specification, exact input-axis checksums, model-checkpoint checksums and one-command inference example. The tag and archival DOI will be added to the manuscript Code availability statement.
+The final tagged release will add the environment specification, exact input-axis checksums, model-checkpoint checksums and one-command inference example. Checkpoint binaries are withheld from this initial source commit until the final model version is frozen; they will be attached to the corresponding tagged release.
 
 ## Scope
 
