@@ -1,0 +1,71 @@
+{
+  "version": "candidate-v1",
+  "public_deposit": false,
+  "files": [
+    {
+      "path": "configs/multicancer_protocol_lock_example.json",
+      "bytes": 6620,
+      "sha256": "041830d3dc7868dae203fdb60660230e3f7c96fe240ac93eb65ebefe6a16f7ad"
+    },
+    {
+      "path": "LICENSE_PLACEHOLDER.md",
+      "bytes": 130,
+      "sha256": "78ef243f75c3f5fa82b7f0c837af271f44d23d2b197206644804c3ed05c37c6b"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1370,
+      "sha256": "38373d18042bb6e639be56a79ee63517bb5c495a76ce133d5740f129725a2b94"
+    },
+    {
+      "path": "src/experiment_base.py",
+      "bytes": 26231,
+      "sha256": "cc6a6fac8497ec5dfecf1e304b44687f27651a36ba5fcb4ed41eea1dbd751357"
+    },
+    {
+      "path": "src/figures/build_clean_fig234_v4.py",
+      "bytes": 15869,
+      "sha256": "7e3f608325b76aecc6fb41e39079e1e770cb7269c5941f4fd4d6fd7a01c96b73"
+    },
+    {
+      "path": "src/figures/build_final_data_figures_v1.py",
+      "bytes": 13029,
+      "sha256": "9e8038b837b7d327d708add5cabed0a2c17cfd164fbb06d8ea73b6bf4e248f54"
+    },
+    {
+      "path": "src/graph_model14.py",
+      "bytes": 3949,
+      "sha256": "06376bb11623c1ff25039c56d15bc2995d42c9cbf82259637ef8d9f563e2fb82"
+    },
+    {
+      "path": "src/original_weibull_loss_corrected.py",
+      "bytes": 1464,
+      "sha256": "18272c9534cba6e523455177869470ff50e08e9cda47ebbb59a863a5eb2a6aee"
+    },
+    {
+      "path": "src/run_activity22_coxnet.py",
+      "bytes": 12516,
+      "sha256": "004dd03b2c2eca4e34722e2a6eecb89f17b45fdfbe2352a214bd84aef81353e4"
+    },
+    {
+      "path": "src/run_backbone_objective_v1.py",
+      "bytes": 10976,
+      "sha256": "b089ceb9633c6dcbca0f083bf703ce1437112acef89c269f4bd0c6e03db0ec86"
+    },
+    {
+      "path": "src/run_backbone_prior_replication_v1.py",
+      "bytes": 3441,
+      "sha256": "b78d80f77ffacaa39cd0b5226d71128fe89d748244ee1d211cf1849b9f50ec7e"
+    },
+    {
+      "path": "src/run_multicancer_backbone_v1.py",
+      "bytes": 7979,
+      "sha256": "afba4c7665ae4f0b1989244573b1166a0195451e6bdb4299790299f2da1a1dfa"
+    },
+    {
+      "path": "src/unified_experiment_base.py",
+      "bytes": 60575,
+      "sha256": "d7f6a08996bbb7e9333a52d0b9f16b2e28500aaf9530fbc8f8f54b716e4b0b34"
+    }
+  ]
+}
